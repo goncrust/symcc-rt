@@ -205,6 +205,8 @@ SymExpr _sym_build_extract(SymExpr expr, uint64_t offset, uint64_t length,
 void _sym_notify_call(uintptr_t site_id);
 void _sym_notify_ret(uintptr_t site_id);
 void _sym_notify_basic_block(uintptr_t site_id);
+void _sym_notify_jcc(uintptr_t at, uintptr_t jump, uintptr_t fall);
+void _sym_set_code_range(uintptr_t lo, uintptr_t hi);
 
 /*
  * Debugging

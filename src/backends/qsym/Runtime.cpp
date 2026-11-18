@@ -128,8 +128,14 @@ public:
   }
 
   void pushInputByte(size_t offset, uint8_t value) {
-    if (inputs_.size() <= offset)
+    if (inputs_.size() <= offset) {
       inputs_.resize(offset + 1);
+
+      if (frontier_fp_) {
+        fprintf(frontier_fp_, "#INPUT read=%zu len=0\n\n", inputs_.size());
+        fflush(frontier_fp_);
+      }
+    }
 
     inputs_[offset] = value;
   }
@@ -406,6 +412,8 @@ UNSUPPORTED(SymExpr _sym_build_float_to_unsigned_integer(SymExpr, uint8_t))
 // Call-stack tracing
 //
 
+extern "C" uintptr_t _sym_code_lo = 0, _sym_code_hi = 0;
+
 void _sym_notify_call(uintptr_t site_id) {
   g_call_stack_manager.visitCall(site_id);
 }
@@ -414,8 +422,20 @@ void _sym_notify_ret(uintptr_t site_id) {
   g_call_stack_manager.visitRet(site_id);
 }
 
+void _sym_set_code_range(uintptr_t lo, uintptr_t hi) {
+  _sym_code_lo = lo;
+  _sym_code_hi = hi;
+}
+
+void _sym_notify_jcc(uintptr_t at, uintptr_t jump, uintptr_t fall) {
+  if (g_solver)
+    g_solver->noteJcc(at, jump, fall);
+}
+
 void _sym_notify_basic_block(uintptr_t site_id) {
   g_call_stack_manager.visitBasicBlock(site_id);
+  if (g_solver)
+    g_solver->noteBlock(site_id);
 }
 
 //
