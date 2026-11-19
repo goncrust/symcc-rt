@@ -414,12 +414,31 @@ UNSUPPORTED(SymExpr _sym_build_float_to_unsigned_integer(SymExpr, uint8_t))
 
 extern "C" uintptr_t _sym_code_lo = 0, _sym_code_hi = 0;
 
+// QSYM's call stack (the context of its pruning) only with SYMCC_CALL_STACK set,
+// and only the program's own code (library addresses move between runs)
+static const bool g_track_calls = [] {
+  const char* v = getenv("SYMCC_CALL_STACK");
+  return v && *v && strcmp(v, "0") != 0;
+}();
+
+static bool inCodeRange(uintptr_t site_id) {
+  return site_id >= _sym_code_lo && site_id < _sym_code_hi;
+}
+
 void _sym_notify_call(uintptr_t site_id) {
-  g_call_stack_manager.visitCall(site_id);
+  if (g_track_calls && inCodeRange(site_id))
+    g_call_stack_manager.visitCall(site_id);
+
+  if (g_solver)
+    g_solver->noteCall(site_id);
 }
 
 void _sym_notify_ret(uintptr_t site_id) {
-  g_call_stack_manager.visitRet(site_id);
+  if (g_track_calls && inCodeRange(site_id))
+    g_call_stack_manager.visitRet(site_id);
+
+  if (g_solver)
+    g_solver->noteRet(site_id);
 }
 
 void _sym_set_code_range(uintptr_t lo, uintptr_t hi) {
